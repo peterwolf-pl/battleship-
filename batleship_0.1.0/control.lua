@@ -19,11 +19,6 @@ local function get_ship_inventory(ship)
     return inventory
   end
 
-  inventory = ship.get_inventory(defines.inventory.car_trunk)
-  if inventory then
-    return inventory
-  end
-
   inventory = ship.get_inventory(defines.inventory.chest)
   if inventory then
     return inventory
