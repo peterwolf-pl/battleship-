@@ -1,7 +1,7 @@
 local ship_item = {
   type = "item",
   name = "batleship",
-  icon = "__base__/graphics/icons/cargo-wagon.png",
+  icon = "__base__/graphics/icons/car.png",
   icon_size = 64,
   subgroup = "transport",
   order = "b[batleship]",

@@ -1,14 +1,14 @@
 local tech = {
   type = "technology",
   name = "batleship",
-  icon = "__base__/graphics/technology/artillery.png",
+  icon = "__base__/graphics/technology/automobilism.png",
   icon_size = 256,
-  prerequisites = {"artillery"},
+  prerequisites = {"automobilism", "artillery"},
   effects = {
     {type = "unlock-recipe", recipe = "batleship"}
   },
   unit = {
-    count = 500,
+    count = 300,
     ingredients = {
       {"automation-science-pack", 1},
       {"logistic-science-pack", 1},
