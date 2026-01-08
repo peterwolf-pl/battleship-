@@ -4,11 +4,11 @@ local ship_recipe = {
   enabled = false,
   energy_required = 30,
   ingredients = {
-    {"steel-plate", 400},
-    {"engine-unit", 100},
-    {"advanced-circuit", 100},
-    {"artillery-turret", 2},
-    {"artillery-shell", 50}
+    {type = "item", name = "steel-plate", amount = 400},
+    {type = "item", name = "engine-unit", amount = 100},
+    {type = "item", name = "advanced-circuit", amount = 100},
+    {type = "item", name = "artillery-turret", amount = 2},
+    {type = "item", name = "artillery-shell", amount = 50}
   },
   result = "batleship"
 }
