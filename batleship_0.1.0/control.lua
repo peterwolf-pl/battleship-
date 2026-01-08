@@ -1,11 +1,34 @@
 local SHIP_NAME = "batleship"
 local TURRET_NAME = "batleship-artillery-turret"
 local AMMO_NAME = "artillery-shell"
+local AMMO_TARGET = 15
+
+local OFFSETS = {
+  {x = -3, y = 0},
+  {x = 0, y = 0},
+  {x = 3, y = 0}
+}
 
 local function get_ship_inventory(ship)
-  if ship and ship.valid then
-    return ship.get_inventory(defines.inventory.chest)
+  if not ship or not ship.valid then
+    return nil
   end
+
+  local inventory = ship.get_inventory(defines.inventory.cargo_wagon)
+  if inventory then
+    return inventory
+  end
+
+  inventory = ship.get_inventory(defines.inventory.car_trunk)
+  if inventory then
+    return inventory
+  end
+
+  inventory = ship.get_inventory(defines.inventory.chest)
+  if inventory then
+    return inventory
+  end
+
   return nil
 end
 
@@ -16,59 +39,77 @@ local function get_turret_inventory(turret)
   return nil
 end
 
+local function ensure_global()
+  global.batleships = global.batleships or {}
+end
+
+local function create_turret(ship, offset)
+  if not ship or not ship.valid then
+    return nil
+  end
+
+  return ship.surface.create_entity({
+    name = TURRET_NAME,
+    position = {x = ship.position.x + offset.x, y = ship.position.y + offset.y},
+    force = ship.force,
+    raise_built = true
+  })
+end
+
 local function remove_turrets(entry)
   if not entry or not entry.turrets then
     return
   end
+
   for _, turret in pairs(entry.turrets) do
     if turret and turret.valid then
-      turret.destroy()
+      turret.destroy({raise_destroy = true})
     end
   end
 end
 
-local function create_turrets_for_ship(ship)
-  local offsets = {
-    {0.0, -1.5},
-    {-1.0, 1.0},
-    {1.0, 1.0}
-  }
-
-  local turrets = {}
-  for index, offset in ipairs(offsets) do
-    local position = {x = ship.position.x + offset[1], y = ship.position.y + offset[2]}
-    local turret = ship.surface.create_entity({
-      name = TURRET_NAME,
-      position = position,
-      force = ship.force
-    })
-    turrets[index] = turret
+local function ensure_turrets(entry)
+  if not entry or not entry.ship or not entry.ship.valid then
+    return
   end
-  return turrets
+
+  entry.turrets = entry.turrets or {}
+  entry.offsets = entry.offsets or OFFSETS
+
+  for index, offset in ipairs(entry.offsets) do
+    local turret = entry.turrets[index]
+    if not (turret and turret.valid) then
+      entry.turrets[index] = create_turret(entry.ship, offset)
+    end
+  end
 end
 
 local function register_ship(ship)
   if not ship or not ship.valid or ship.name ~= SHIP_NAME then
     return
   end
-  global.batleships = global.batleships or {}
+
+  ensure_global()
   if global.batleships[ship.unit_number] then
     return
   end
-  local turrets = create_turrets_for_ship(ship)
-  global.batleships[ship.unit_number] = {
+
+  local entry = {
     ship = ship,
-    turrets = turrets
+    turrets = {},
+    offsets = OFFSETS
   }
+
+  global.batleships[ship.unit_number] = entry
+  ensure_turrets(entry)
 end
 
 local function unregister_ship(ship)
-  if not ship or not ship.valid then
+  if not ship then
     return
   end
-  if not global.batleships then
-    return
-  end
+
+  ensure_global()
   local entry = global.batleships[ship.unit_number]
   if entry then
     remove_turrets(entry)
@@ -91,9 +132,7 @@ local function on_entity_removed(event)
 end
 
 local function cleanup_invalid_entries()
-  if not global.batleships then
-    return
-  end
+  ensure_global()
   for unit_number, entry in pairs(global.batleships) do
     if not entry.ship or not entry.ship.valid then
       remove_turrets(entry)
@@ -102,28 +141,31 @@ local function cleanup_invalid_entries()
   end
 end
 
-local function load_ammo()
-  if not global.batleships then
+local function load_ammo_for_entry(entry)
+  if not entry or not entry.ship or not entry.ship.valid then
     return
   end
-  for _, entry in pairs(global.batleships) do
-    local ship = entry.ship
-    if ship and ship.valid then
-      local ship_inventory = get_ship_inventory(ship)
-      if ship_inventory then
-        for _, turret in pairs(entry.turrets or {}) do
-          local turret_inventory = get_turret_inventory(turret)
-          if turret_inventory and turret_inventory.valid then
-            local available = ship_inventory.get_item_count(AMMO_NAME)
-            if available > 0 then
-              local insertable = turret_inventory.get_insertable_count(AMMO_NAME)
-              if insertable > 0 then
-                local to_move = math.min(available, insertable)
-                local removed = ship_inventory.remove({name = AMMO_NAME, count = to_move})
-                if removed > 0 then
-                  turret_inventory.insert({name = AMMO_NAME, count = removed})
-                end
-              end
+
+  ensure_turrets(entry)
+  local ship_inventory = get_ship_inventory(entry.ship)
+  if not ship_inventory then
+    return
+  end
+
+  for _, turret in pairs(entry.turrets or {}) do
+    local turret_inventory = get_turret_inventory(turret)
+    if turret_inventory and turret_inventory.valid then
+      local current = turret_inventory.get_item_count(AMMO_NAME)
+      local missing = AMMO_TARGET - current
+      if missing > 0 then
+        local available = ship_inventory.get_item_count(AMMO_NAME)
+        if available > 0 then
+          local insertable = turret_inventory.get_insertable_count(AMMO_NAME)
+          local to_move = math.min(available, missing, insertable)
+          if to_move > 0 then
+            local removed = ship_inventory.remove({name = AMMO_NAME, count = to_move})
+            if removed > 0 then
+              turret_inventory.insert({name = AMMO_NAME, count = removed})
             end
           end
         end
@@ -132,30 +174,38 @@ local function load_ammo()
   end
 end
 
+local function on_nth_tick()
+  ensure_global()
+  cleanup_invalid_entries()
+  for _, entry in pairs(global.batleships) do
+    load_ammo_for_entry(entry)
+  end
+end
+
 script.on_init(function()
   global.batleships = {}
 end)
 
 script.on_configuration_changed(function()
-  global.batleships = global.batleships or {}
+  ensure_global()
   cleanup_invalid_entries()
 end)
 
 script.on_event({
   defines.events.on_built_entity,
-  defines.events.on_robot_built_entity,
-  defines.events.script_raised_built,
-  defines.events.script_raised_revive
+  defines.events.on_robot_built_entity
 }, on_entity_built)
 
 script.on_event({
-  defines.events.on_pre_player_mined_item,
-  defines.events.on_robot_pre_mined,
-  defines.events.on_entity_died,
-  defines.events.script_raised_destroy
+  defines.events.on_player_mined_entity,
+  defines.events.on_robot_mined_entity,
+  defines.events.on_entity_died
 }, on_entity_removed)
 
-script.on_nth_tick(30, function()
-  cleanup_invalid_entries()
-  load_ammo()
-end)
+script.on_nth_tick(30, on_nth_tick)
+
+-- Test checklist:
+-- 1) Postaw statek i potwierdź, że 3 działa pojawiają się na offsetach (-3,0), (0,0), (3,0).
+-- 2) Włóż artillery-shell do ładowni statku i sprawdź, że każde działo ładuje się do 15 sztuk.
+-- 3) Wykop lub zniszcz statek i potwierdź usunięcie dział.
+-- 4) Usuń pojedyncze działo skryptem i sprawdź, że zostaje odtworzone.
