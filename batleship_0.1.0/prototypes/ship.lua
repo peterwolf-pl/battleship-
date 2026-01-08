@@ -1,8 +1,7 @@
--- Using "car" keeps the entity simple, placeable on any terrain, and provides an inventory
--- without requiring rails or special placement constraints.
-local ship = table.deepcopy(data.raw["car"]["car"])
+-- Use the cargo ship prototype from the cargo-ships mod as the base entity.
+local ship = table.deepcopy(data.raw["cargo-ship"]["cargo-ship"])
 ship.name = "batleship"
-ship.icon = "__base__/graphics/icons/car.png"
+ship.icon = "__cargo-ships__/graphics/icons/cargo-ship.png"
 ship.icon_size = 64
 ship.flags = {"placeable-neutral", "player-creation"}
 ship.minable = {mining_time = 1, result = "batleship"}
