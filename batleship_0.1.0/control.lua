@@ -40,6 +40,7 @@ local function get_turret_inventory(turret)
 end
 
 local function ensure_global()
+  global = global or {}
   global.batleships = global.batleships or {}
 end
 
@@ -183,6 +184,7 @@ local function on_nth_tick()
 end
 
 script.on_init(function()
+  ensure_global()
   global.batleships = {}
 end)
 
