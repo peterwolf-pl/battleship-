@@ -10,7 +10,9 @@ local ship_recipe = {
     {type = "item", name = "artillery-turret", amount = 2},
     {type = "item", name = "artillery-shell", amount = 50}
   },
-  result = "batleship"
+  results = {
+    {type = "item", name = "batleship", amount = 1}
+  }
 }
 
 data:extend({ship_recipe})
