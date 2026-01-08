@@ -78,6 +78,4 @@ local ship = {
   }
 }
 
-ship.energy_per_hit_point = nil
-
 data:extend({ship})
