@@ -1,5 +1,25 @@
 -- Use the cargo ship prototype from the cargo-ships mod as the base entity.
-local ship = table.deepcopy(data.raw["cargo-ship"]["cargo-ship"])
+local function find_cargo_ship_prototype()
+  local direct = data.raw["cargo-ship"] and data.raw["cargo-ship"]["cargo-ship"]
+  if direct then
+    return direct
+  end
+
+  local by_name = data.raw["car"] and data.raw["car"]["cargo-ship"]
+  if by_name then
+    return by_name
+  end
+
+  for _, prototypes in pairs(data.raw) do
+    if prototypes["cargo-ship"] then
+      return prototypes["cargo-ship"]
+    end
+  end
+
+  error("cargo ship prototype not found; ensure the cargo-ships mod is enabled.")
+end
+
+local ship = table.deepcopy(find_cargo_ship_prototype())
 ship.name = "batleship"
 ship.icon = "__cargo-ships__/graphics/icons/cargo-ship.png"
 ship.icon_size = 64
