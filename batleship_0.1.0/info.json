@@ -1,0 +1,11 @@
+{
+  "name": "batleship",
+  "version": "0.1.0",
+  "title": "BatleShip",
+  "author": "OpenAI",
+  "factorio_version": "2.0",
+  "dependencies": [
+    "base >= 2.0"
+  ],
+  "description": "Adds a batleship with onboard artillery turrets and automatic ammo loading."
+}
